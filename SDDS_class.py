@@ -40,7 +40,7 @@ def str2biarray(input_str):
 
 # seperate the string of the header
 def separate_str(input_str):
-    whitespace_list=[ord(','),ord('\n'),ord(' '),ord('='),ord('!')]
+    whitespace_list=[ord(','),ord('\n'),ord(' '),ord('='),ord('!'),ord('\r')]
     str_list=[]
     tag_start=False
     tag_quote=False
