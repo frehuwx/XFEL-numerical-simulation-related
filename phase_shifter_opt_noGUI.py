@@ -10,19 +10,34 @@ import datetime
 import optuna
 
 # Tags for test control
-Tag_bebug=True
-Tag_usefakeresults=True
+Tag_debug=True
+Tag_usefakeresults=False
+wait_time=1
 
 ################################################################
 # PV names
 ################################################################
-phase_shifter_PVs=['','','','','','','','','','','','','','','']
+phase_shifter_PVs=['SATUN06-UDLY060:PH-SHIFT-OP',
+                   'SATUN07-UDLY060:PH-SHIFT-OP',
+                   'SATUN08-UDLY060:PH-SHIFT-OP',
+                   'SATUN09-UDLY060:PH-SHIFT-OP',
+                   'SATUN10-UDLY060:PH-SHIFT-OP',
+                   'SATUN11-UDLY060:PH-SHIFT-OP',
+                   'SATUN12-UDLY060:PH-SHIFT-OP',
+                   'SATUN13-UDLY060:PH-SHIFT-OP',
+                   'SATUN15-UDLY060:PH-SHIFT-OP',
+                   'SATUN16-UDLY060:PH-SHIFT-OP',
+                   'SATUN17-UDLY060:PH-SHIFT-OP',
+                   'SATUN18-UDLY060:PH-SHIFT-OP',
+                   'SATUN19-UDLY060:PH-SHIFT-OP',
+                   'SATUN20-UDLY060:PH-SHIFT-OP',
+                   'SATUN21-UDLY060:PH-SHIFT-OP']
 intensity_cali_PV='SATFE10-PEPG046:FCUP-INTENSITY-CAL'
 intensity_uncali_PV='SATFE10-PEPG046-EVR0:CALCI'
 PMOS_Maloja=['SATOP21-PMOS127-2D:SPECTRUM_X','SATOP21-PMOS127-2D:SPECTRUM_Y']
-#PSRD_Maloja=['','']
+PSRD_Maloja=['SATOP31-PSRD132:SPECTRUM_X','SATOP31-PSRD132:SPECTRUM_Y']
 PMOS_Furka=['SATOP31-PMOS132-2D:SPECTRUM_X','SATOP31-PMOS132-2D:SPECTRUM_Y']
-
+PSSS=['SARFE10-PSSS059:SPECTRUM_X','SARFE10-PSSS059:SPECTRUM_Y']
 
 
 ################################################################
@@ -48,12 +63,12 @@ class DaqByBSCache():
             return False
         self.channel = self.channels[ich]
         print('Connecting to BS-Channel:',self.channel)
-        self.bs.channels.clear()
+        # self.bs.channels.clear()
         self.hasBStream=True
         try:
-            self.bs.get_vars(self.channel)  # this starts the stream into the cache
+            self.bs.get_vars([self.channel])  # this starts the stream into the cache
         except ValueError:
-            print('Cannot find requested channels in BS stream')
+            print('Cannot find requested channels in BS stream!')
             self.hasBStream=False
         self.pv = None
 
@@ -94,14 +109,17 @@ class BayesianOpt():
         # add the requested channels to the cache
         for i in range(len(Channels2Listen)):
             self.DaqCache.connect(i)
-        self.Optimizer=optuna.create_study(studyname='Optimizer'+str(datetime.datetime.now()),direction='maximize')
+        self.Optimizer=optuna.create_study(study_name='Optimizer'+str(datetime.datetime.now()),direction='maximize')
         
         # get the values before optimization
         self.init_vals=[]
         for i in range(len(self.Channels2Opt)):
             self.init_vals.append(epics.caget(self.Channels2Opt[i]))
+        print('Done, the initial values are:',end=' ')
+        print(self.init_vals)
         # also initialize the best cases
         self.best_vals=self.init_vals
+        self.current_vals=self.init_vals
     
     def set_analysis_func(self,analysis_func): # setting the post analysis function for the optimization
         self.analysis_func=analysis_func
@@ -131,25 +149,26 @@ class BayesianOpt():
             else:
                 print('I am trying to put '+self.Channels2Opt[i]+' to '+'%.2f'%(temp)+'. I will not do it in debug')
             new_paras.append(temp)
+        self.current_vals=new_paras
         
         # wait some time
-        time.sleep(10)
+        time.sleep(wait_time)
         
         # record the data
         if not Tag_usefakeresults:
             self.DaqCache.flush()
-            data_temp=self.DaqCache.read_nshots(self.n_iter)
+            data_temp=self.DaqCache.read_nshots(self.n_shots)
             self.rawdata=data_temp
         else:
             freq=np.linspace(-10,10,501)
             data_list=[]
-            for i in range(self.n_iter):
+            for i in range(self.n_shots):
                 data_temp={}
                 spec_temp=get_fake_data(freq,np.array(new_paras))
-                data_temp[Channels2Listen[0]]=np.array(freq)
-                data_temp[Channels2Listen[1]]=np.array(spec_temp)
-                fake=np.linspace(0,len(values),len(values))
-                data_temp[Channels2Listen[2]]=-np.sum((values-fake)**2)+1e2
+                data_temp[self.Channels2Listen[0]]=np.array(freq)
+                data_temp[self.Channels2Listen[1]]=np.array(spec_temp)
+                fake=np.linspace(0,len(self.current_vals)-1,len(self.current_vals))*10
+                data_temp[self.Channels2Listen[2]]=-np.sum((np.array(self.current_vals)-fake)**2)+1e2
                 data_list.append(data_temp)
             self.rawdata=data_list
 
@@ -172,13 +191,13 @@ class BayesianOpt():
         else:
             freq=np.linspace(-10,10,501)
             data_list=[]
-            for i in range(self.n_iter):
+            for i in range(self.n_shots):
                 data_temp={}
-                spec_temp=get_fake_data(freq,np.array(new_paras))
-                data_temp[Channels2Listen[0]]=np.array(freq)
-                data_temp[Channels2Listen[1]]=np.array(spec_temp)
-                fake=np.linspace(0,len(values),len(values))
-                data_temp[Channels2Listen[2]]=-np.sum((values-fake)**2)+1e2
+                spec_temp=get_fake_data(freq,np.array(self.current_vals))
+                data_temp[self.Channels2Listen[0]]=np.array(freq)
+                data_temp[self.Channels2Listen[1]]=np.array(spec_temp)
+                fake=np.linspace(0,len(self.current_vals),len(self.current_vals))*10
+                data_temp[self.Channels2Listen[2]]=-np.sum((np.array(self.current_vals)-fake)**2)+1e2
                 data_list.append(data_temp)
             self.rawdata=data_list
         
@@ -188,7 +207,6 @@ class BayesianOpt():
             print('Measurement finish with success.')
         else:
             print('Measurement finish with errors.')
-        self.n_trial+=1
         
         return val
     
@@ -209,7 +227,7 @@ class BayesianOpt():
             self.Optimizer.add_trial(init_trial)
         
         # do the iteraction
-        self.n_trial=0
+        self.n_trial=1
         self.Optimizer.optimize(self.object_func,self.n_iter)
         
         # update the best values
@@ -223,6 +241,9 @@ class BayesianOpt():
             print(self.best_vals)
         else:
             print('finished with error.')
+    
+    def stop(self):
+        self.DaqCache.terminate()
         
 
 ################################################################
@@ -295,13 +316,15 @@ def get_fake_data(freq,values):
 ################################################################
 
 # build the optimizer
-idx_list=[0,1]
+idx_list=[0,1,2]
+Channels2opt=[]
+bounds=[]
 for idx in idx_list:
     Channels2opt.append(phase_shifter_PVs[idx])
-    bounds.append([0,360])
-Channels2listen=[PMOS_Maloja[0],PMOS_Maloja[1],intensity_cali_PV]
+    bounds.append([-200,200])
+Channels2listen=[PSSS[0],PSSS[1],intensity_uncali_PV]
 
-ML_opt=BayesianOpt(Channels2opt=Channels2opt,Channels2Listen=Channels2listen,n_shots=100,n_iter=10,bounds=bounds)
+ML_opt=BayesianOpt(Channels2Opt=Channels2opt,Channels2Listen=Channels2listen,n_shots=100,n_iter=2,bounds=bounds)
 
 
 method='inten'
@@ -312,13 +335,13 @@ def ML_analysis(data):
     if method=='inten':
         inten_list=[]
         for i in range(len(data)):
-            inten_list.append(data[inten_name])
-        val=np.nanmmean(np.array(inten_list))
+            inten_list.append(data[i][inten_name])
+        val=np.nanmean(np.array(inten_list))
     else:
         freq=data[0][freq_name] # we will assume that the x axis remains unchanged
         spec_list=[]
         for i in range(len(data)):
-            spec_list.append(data[spec_name])
+            spec_list.append(data[i][spec_name])
         [time_fs,avg1,avg2]=FFT_avgs(freq,np.array(spec_list))
         p=Gaussian_fit(time_fs,avg1,xrange=[1,10])
         val=p[0]
@@ -327,10 +350,38 @@ def ML_analysis(data):
 ML_opt.set_analysis_func(ML_analysis)
     
 # test 1    
+print('performing test 1:')
 ML_opt.measure()
 
 # test 2
+print('performing test 2:')
 ML_opt.run_optimization()
 
+ML_opt.stop()
+print(ML_opt.n_shots)
+print(len(ML_opt.rawdata))
+print(ML_opt.rawdata[0].keys())
 
+try:
+    y_list=[]
+    for i in range(len(ML_opt.rawdata)):
+        y_list.append(np.array(ML_opt.rawdata[i][spec_name]))
+    y_list=np.array(y_list)
+    y_avg=np.nanmean(y_list,axis=0)
+    x=np.array(ML_opt.rawdata[0][freq_name])
+except:
+    y_avg=[]
+    x=[]
 
+try:
+    inten_list=[]
+    for i in range(len(ML_opt.rawdata)):
+        inten_list.append(ML_opt.rawdata[i][inten_name])
+    inten_list=np.array(inten_list)
+except:
+    inten_list=[]
+
+fig,ax=plt.subplots(1,2)
+ax[0].plot(inten_list)
+ax[1].plot(x,y_avg)
+plt.show()
