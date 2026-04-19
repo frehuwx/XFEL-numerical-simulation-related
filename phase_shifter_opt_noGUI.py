@@ -210,23 +210,14 @@ class BayesianOpt():
         
         return val
     
-    def run_optimization(self,n_iter=-1):
+    def run_optimization(self,n_iter=-1,n_shots=-1):
         # update the iteration time
         if int(n_iter)>0:
             self.n_iter=n_iter
+        if int(n_shots)>0:
+            self.n_shots=n_shots
         
-        # we perform an initial measurement and add that to our trial list
-        val_temp=self.measure()
-        if val_temp>-1e9:
-            parameter_dict={}
-            distribution_dict={}
-            for i in range(len(self.Channels2Opt)):
-                parameter_dict[self.Channels2Opt[i]]=self.init_vals[i]
-                distribution_dict[self.Channels2Opt[i]]=optuna.distributions.FloatDistribution(self.bounds[i][0],self.bounds[i][1])
-            init_trial=optuna.trial.create_trial(params=parameter_dict, distributions=distribution_dict, value=val_temp)
-            self.Optimizer.add_trial(init_trial)
-        
-        # do the iteraction
+        # do the iteration
         self.n_trial=1
         self.Optimizer.optimize(self.object_func,self.n_iter)
         
@@ -315,73 +306,73 @@ def get_fake_data(freq,values):
 # combine the analysis with the classes
 ################################################################
 
-# build the optimizer
-idx_list=[0,1,2]
-Channels2opt=[]
-bounds=[]
-for idx in idx_list:
-    Channels2opt.append(phase_shifter_PVs[idx])
-    bounds.append([-200,200])
-Channels2listen=[PSSS[0],PSSS[1],intensity_uncali_PV]
+# # build the optimizer
+# idx_list=[0,1,2]
+# Channels2opt=[]
+# bounds=[]
+# for idx in idx_list:
+#     Channels2opt.append(phase_shifter_PVs[idx])
+#     bounds.append([-200,200])
+# Channels2listen=[PSSS[0],PSSS[1],intensity_uncali_PV]
 
-ML_opt=BayesianOpt(Channels2Opt=Channels2opt,Channels2Listen=Channels2listen,n_shots=100,n_iter=2,bounds=bounds)
+# ML_opt=BayesianOpt(Channels2Opt=Channels2opt,Channels2Listen=Channels2listen,n_shots=100,n_iter=2,bounds=bounds)
 
 
-method='inten'
-freq_name=Channels2listen[0]
-spec_name=Channels2listen[1]
-inten_name=Channels2listen[2]
-def ML_analysis(data):
-    if method=='inten':
-        inten_list=[]
-        for i in range(len(data)):
-            inten_list.append(data[i][inten_name])
-        val=np.nanmean(np.array(inten_list))
-    else:
-        freq=data[0][freq_name] # we will assume that the x axis remains unchanged
-        spec_list=[]
-        for i in range(len(data)):
-            spec_list.append(data[i][spec_name])
-        [time_fs,avg1,avg2]=FFT_avgs(freq,np.array(spec_list))
-        p=Gaussian_fit(time_fs,avg1,xrange=[1,10])
-        val=p[0]
-    return val
+# method='inten'
+# freq_name=Channels2listen[0]
+# spec_name=Channels2listen[1]
+# inten_name=Channels2listen[2]
+# def ML_analysis(data):
+#     if method=='inten':
+#         inten_list=[]
+#         for i in range(len(data)):
+#             inten_list.append(data[i][inten_name])
+#         val=np.nanmean(np.array(inten_list))
+#     else:
+#         freq=data[0][freq_name] # we will assume that the x axis remains unchanged
+#         spec_list=[]
+#         for i in range(len(data)):
+#             spec_list.append(data[i][spec_name])
+#         [time_fs,avg1,avg2]=FFT_avgs(freq,np.array(spec_list))
+#         p=Gaussian_fit(time_fs,avg1,xrange=[1,10])
+#         val=p[0]
+#     return val
         
-ML_opt.set_analysis_func(ML_analysis)
+# ML_opt.set_analysis_func(ML_analysis)
     
-# test 1    
-print('performing test 1:')
-ML_opt.measure()
+# # test 1    
+# print('performing test 1:')
+# ML_opt.measure()
 
-# test 2
-print('performing test 2:')
-ML_opt.run_optimization()
+# # test 2
+# print('performing test 2:')
+# ML_opt.run_optimization()
 
-ML_opt.stop()
-print(ML_opt.n_shots)
-print(len(ML_opt.rawdata))
-print(ML_opt.rawdata[0].keys())
+# ML_opt.stop()
+# print(ML_opt.n_shots)
+# print(len(ML_opt.rawdata))
+# print(ML_opt.rawdata[0].keys())
 
-try:
-    y_list=[]
-    for i in range(len(ML_opt.rawdata)):
-        y_list.append(np.array(ML_opt.rawdata[i][spec_name]))
-    y_list=np.array(y_list)
-    y_avg=np.nanmean(y_list,axis=0)
-    x=np.array(ML_opt.rawdata[0][freq_name])
-except:
-    y_avg=[]
-    x=[]
+# try:
+#     y_list=[]
+#     for i in range(len(ML_opt.rawdata)):
+#         y_list.append(np.array(ML_opt.rawdata[i][spec_name]))
+#     y_list=np.array(y_list)
+#     y_avg=np.nanmean(y_list,axis=0)
+#     x=np.array(ML_opt.rawdata[0][freq_name])
+# except:
+#     y_avg=[]
+#     x=[]
 
-try:
-    inten_list=[]
-    for i in range(len(ML_opt.rawdata)):
-        inten_list.append(ML_opt.rawdata[i][inten_name])
-    inten_list=np.array(inten_list)
-except:
-    inten_list=[]
+# try:
+#     inten_list=[]
+#     for i in range(len(ML_opt.rawdata)):
+#         inten_list.append(ML_opt.rawdata[i][inten_name])
+#     inten_list=np.array(inten_list)
+# except:
+#     inten_list=[]
 
-fig,ax=plt.subplots(1,2)
-ax[0].plot(inten_list)
-ax[1].plot(x,y_avg)
-plt.show()
+# fig,ax=plt.subplots(1,2)
+# ax[0].plot(inten_list)
+# ax[1].plot(x,y_avg)
+# plt.show()
