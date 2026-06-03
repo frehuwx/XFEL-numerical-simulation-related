@@ -1,0 +1,72 @@
+from bstrd import BSCache
+from epics import PV
+import epics
+from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
+import numpy as np
+import sys
+import time
+import datetime
+
+
+################################################################
+# PV names
+################################################################
+
+PMOS_Maloja=['SATOP21-PMOS127-2D:SPECTRUM_X','SATOP21-PMOS127-2D:SPECTRUM_Y']
+PSRD_Maloja=['SATOP31-PSRD132:SPECTRUM_X','SATOP31-PSRD132:SPECTRUM_Y']
+PMOS_Furka=['SATOP31-PMOS132-2D:SPECTRUM_X','SATOP31-PMOS132-2D:SPECTRUM_Y']
+PSSS=['SARFE10-PSSS059:SPECTRUM_X','SARFE10-PSSS059:SPECTRUM_Y']
+
+################################################################
+# BSCache class
+################################################################
+
+class DaqByBSCache():
+    def __init__(self,channel_list):
+        self.bs = BSCache(100000,receive_timeout=10000)  # 100 second timeout, size for 10 second data taken
+        self.bs.stop()
+        self.channel = None
+        self.channels = channel_list
+        self.hasBStream=False
+
+    def connect_name(self, name):
+        index = names.index(name)
+        self.connect(index)
+
+    def connect(self,ich):
+        if ich < 0 or ich >= len(self.channels):
+            return False
+        self.channel = self.channels[ich]
+        print('Connecting to BS-Channel:',self.channel)
+        # self.bs.channels.clear()
+        self.hasBStream=True
+        try:
+            self.bs.get_vars([self.channel])  # this starts the stream into the cache
+        except ValueError:
+            print('Cannot find requested channels in BS stream!')
+            self.hasBStream=False
+        self.pv = None
+
+    def terminate(self):
+        print('Stopping BSStream Thread...')
+        self.bs.stop()
+        self.bs.pt.running.clear() # for some reason I have to
+        if self.pv:
+            self.pv.disconnect()
+
+    def flush(self):
+        self.bs.flush()
+
+    def read(self):
+        return next(self.bs)
+    
+    def read_nshots(self,n_shots):
+        data=[]
+        for i in range(int(n_shots)):
+            data.append(self.read())
+        return data
+
+################################################################
+# Measure results
+################################################################
