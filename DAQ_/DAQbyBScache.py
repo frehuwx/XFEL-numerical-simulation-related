@@ -14,7 +14,7 @@ import datetime
 ################################################################
 
 PMOS_Maloja=['SATOP21-PMOS127-2D:SPECTRUM_X','SATOP21-PMOS127-2D:SPECTRUM_Y']
-PSRD_Maloja=['SATOP31-PSRD132:SPECTRUM_X','SATOP31-PSRD132:SPECTRUM_Y']
+PSRD_Furka=['SATOP31-PSRD132:SPECTRUM_X','SATOP31-PSRD132:SPECTRUM_Y']
 PMOS_Furka=['SATOP31-PMOS132-2D:SPECTRUM_X','SATOP31-PMOS132-2D:SPECTRUM_Y']
 PSSS=['SARFE10-PSSS059:SPECTRUM_X','SARFE10-PSSS059:SPECTRUM_Y']
 
@@ -68,5 +68,42 @@ class DaqByBSCache():
         return data
 
 ################################################################
-# Measure results
+# Take the measurement
 ################################################################
+
+# configure the measurement: 
+# measurement types: 'dummy' or 'scan'
+tag_meas_type='dummy'
+tag_return2init=False
+wait_time=5
+nshots=100
+
+# configure the PVs
+scan_PV=''
+spec_PVs=PSRD_Furka
+other_PVs=[]
+
+# configure the scan range
+val_begin=0
+val_end=0
+nsteps=1
+scan_range=np.linspace(val_begin,val_end,nsteps)
+
+# configure the scan name
+scanname_comments=''
+
+# do the measurement
+if tag_meas_type='dummy':
+    print('This is a dummy scan, with %d shots'%(nshots))
+    tag_continue=input('type yes to continue')
+    if tag_continue=='yes':
+        # do the dummy measurment
+    
+elif tag_meas_type='scan':
+    print('This is a parameter meter scan, with %d steps and %d shots for each step'%(nsteps,nshots))
+    print('The scan values are:'+str(scan_range))
+    if tag_continue=='yes':
+        # do the scan
+    
+else:
+    print('unable to configure the scan!')
