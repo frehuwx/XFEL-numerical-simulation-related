@@ -92,12 +92,23 @@ scan_range=np.linspace(val_begin,val_end,nsteps)
 # configure the scan name
 scanname_comments=''
 
+# get the channels
+Channels2Listen=np.concatenate(spec_PVs,other_PVs)
+print(Channels2Listen)
+
 # do the measurement
 if tag_meas_type='dummy':
     print('This is a dummy scan, with %d shots'%(nshots))
     tag_continue=input('type yes to continue')
     if tag_continue=='yes':
         # do the dummy measurment
+        DaqCache=DaqByBSCache(Channels2Listen)
+        # add the requested channels to the cache
+        for i in range(len(Channels2Listen)):
+            DaqCache.connect(i)
+        # take the actual measurement
+        raw_data=DaqCache.read_nshots(nshots)
+        
     
 elif tag_meas_type='scan':
     print('This is a parameter meter scan, with %d steps and %d shots for each step'%(nsteps,nshots))
