@@ -160,7 +160,9 @@ scan_range=np.linspace(val_begin,val_end,nsteps)
 scanname_comments=''
 
 # get the channels
-Channels2Listen=np.concatenate(spec_PVs,other_PVs)
+Channels2Listen=spec_PVs
+for channel_list in other_PVs:
+    Channels2Listen=np.concatenate((Channels2Listen,channel_list))
 print(Channels2Listen)
 
 # do the measurement
