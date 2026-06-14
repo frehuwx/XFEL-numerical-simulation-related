@@ -83,8 +83,23 @@ for bpm in BPM_chs_raw:
             BPM_chs.append('%s:%s1' % (bpm, dim))
         else:
             BPM_chs.append('%s:%s2' % (bpm, dim))
+                    
+################################################################
+# get the file name
+################################################################
+def setup_filename(): # setup the folder & file name
+    # get the current date
+    year=datetime.now().year
+    month=datetime.now().month
+    day=datetime.now().day
+    hour=datetime.now().hour
+    minute=datetime.now().minute
+    second=datetime.now().second
+    # the filename
+    
+    # the
 
-
+    return [foldername,filename]
 ################################################################
 # BSCache class
 ################################################################
@@ -146,15 +161,18 @@ wait_time=5
 nshots=100
 
 # configure the PVs
-scan_PV=''
+scan_PVs=[]
+spec_PVs=[]
 spec_PVs=PSRD_Furka
 other_PVs=[otherPV_chs, Laser_chs, BPM_chs]
 
 # configure the scan range
-val_begin=0
-val_end=0
+vals_begin=[]
+vals_end=[]
 nsteps=1
-scan_range=np.linspace(val_begin,val_end,nsteps)
+scan_ranges=[]
+for i in range(len(val_begin)):
+    scan_ranges.append(np.linspace(vals_begin[i],vals_end[i],nsteps))
 
 # configure the scan name
 scanname_comments=''
@@ -177,13 +195,41 @@ if tag_meas_type='dummy':
             DaqCache.connect(i)
         # take the actual measurement
         raw_data=DaqCache.read_nshots(nshots)
-        
+        # get an output filename
+        output_name=
     
 elif tag_meas_type='scan':
     print('This is a parameter meter scan, with %d steps and %d shots for each step'%(nsteps,nshots))
-    print('The scan values are:'+str(scan_range))
+    print('The scan channels are:'+str(scan_PVs))
+    print('The scan values are:')
+    for i in range(len(scan_ranges)):
+        print(str(scan_ranges[i]))
+    tag_continue=input('type yes to continue')
     if tag_continue=='yes':
+        # do the measurment
+        DaqCache=DaqByBSCache(Channels2Listen)
+        # add the requested channels to the cache
+        for i in range(len(Channels2Listen)):
+            DaqCache.connect(i)
+        # take the actual measurement
+        raw_data=DaqCache.read_nshots(nshots)
+        # take the init values
+        init_vals=[]
+        for i in range(len(scan_PVs)):
+            init_vals.append(epics.caget(scan_PVs[i]))
         # do the scan
-    
+        if np.abs(init_vals[0]-scan_ranges[0][0])<np.abs(init_vals[0]-scan_ranges[0][1]): # we scan from the beginning in this case
+            for i in range(len()):
+            init_vals
+        else: # we scan from the end in this case
+            init
+        # return to initial value            
+        if tag_return2init:
+            print('returning to initial values...')
+            for i in range(len(scan_PVs)):
+                epics.caput(scan_PVs[i],init_vals[i])
+            print('done.')
+
+        
 else:
     print('unable to configure the scan!')
