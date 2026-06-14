@@ -7,6 +7,7 @@ import numpy as np
 import sys
 import time
 import datetime
+import h5py
 
 
 ################################################################
@@ -87,7 +88,7 @@ for bpm in BPM_chs_raw:
 ################################################################
 # get the file name
 ################################################################
-def setup_filename(): # setup the folder & file name
+def setup_filename(comments=''): # setup the folder & file name
     # get the current date
     year=datetime.now().year
     month=datetime.now().month
@@ -95,11 +96,28 @@ def setup_filename(): # setup the folder & file name
     hour=datetime.now().hour
     minute=datetime.now().minute
     second=datetime.now().second
-    # the filename
-    
-    # the
-
+    # get the directory
+    foldername='/sf/data/measurements/%d/%02d/%02d/'%(year,month,day)+'spec_meas_by_bschannel/'
+    filename='/sf/data/measurements/%d/%02d/%02d/'%(year,month,day)
+    # get the filename
+    try:
+        ch_cur=os.listdir(foldername)
+        foldername=foldername+'scan%04d/'%(len(ch_cur)+1)
+        os.mkdir(foldername)
+        if len(comments)>0:
+            filename=foldername+'scan%04d_'%(len(ch_cur)+1)+comments+'_%04d_%02d_%02d_%02d_%02d_%02d'%(year,month,day,hour,minute,second)+'.h5'
+        else:
+            filename=foldername+'scan%04d_'%(len(ch_cur)+1)+'%04d_%02d_%02d_%02d_%02d_%02d'%(year,month,day,hour,minute,second)+'.h5'
+    except:
+        os.mkdir(foldername)
+        foldername=foldername+'scan%04d/'%(1)
+        os.mkdir(foldername)
+        if len(comments)>0:
+            filename=foldername+'scan%04d_'%(1)+comments+'_%04d_%02d_%02d_%02d_%02d_%02d'%(year,month,day,hour,minute,second)+'.h5'
+        else:
+            filename=foldername+'scan%04d_'%(1)+'%04d_%02d_%02d_%02d_%02d_%02d'%(year,month,day,hour,minute,second)+'.h5'
     return [foldername,filename]
+
 ################################################################
 # BSCache class
 ################################################################
@@ -186,17 +204,32 @@ print(Channels2Listen)
 # do the measurement
 if tag_meas_type='dummy':
     print('This is a dummy scan, with %d shots'%(nshots))
-    tag_continue=input('type yes to continue')
+    tag_continue=input('Type yes to continue')
     if tag_continue=='yes':
-        # do the dummy measurment
+                
+        # setup the dummy measurment
         DaqCache=DaqByBSCache(Channels2Listen)
         # add the requested channels to the cache
         for i in range(len(Channels2Listen)):
             DaqCache.connect(i)
+                    
         # take the actual measurement
+        print('Start measuring...',end=' ')
         raw_data=DaqCache.read_nshots(nshots)
+        print('Done.')
+                
+        # save data
+        print('Saving data...',end=' ')
         # get an output filename
-        output_name=
+        [output_foldernamem,output_filename]=setup_filename(scanname_comments)
+        f=h5py.File(output_filename,'w')
+        f.create_dataset('scan_type',data=['dummy'])
+        f.create_dataset('nshots',data=nshots)
+        for dataname in Channels2Listen:
+            h5py.create_dataset(dataname,data=raw_data[dataname])
+        f.close()
+        print('Done. Data saved in:')
+        print('output_filename')
     
 elif tag_meas_type='scan':
     print('This is a parameter meter scan, with %d steps and %d shots for each step'%(nsteps,nshots))
@@ -206,29 +239,39 @@ elif tag_meas_type='scan':
         print(str(scan_ranges[i]))
     tag_continue=input('type yes to continue')
     if tag_continue=='yes':
-        # do the measurment
+                
+        # setup the measurment
         DaqCache=DaqByBSCache(Channels2Listen)
         # add the requested channels to the cache
         for i in range(len(Channels2Listen)):
             DaqCache.connect(i)
-        # take the actual measurement
-        raw_data=DaqCache.read_nshots(nshots)
+                    
         # take the init values
         init_vals=[]
         for i in range(len(scan_PVs)):
             init_vals.append(epics.caget(scan_PVs[i]))
+                    
         # do the scan
         if np.abs(init_vals[0]-scan_ranges[0][0])<np.abs(init_vals[0]-scan_ranges[0][1]): # we scan from the beginning in this case
             for i in range(len()):
+                print('Start measuring %d, go to the set values')
+                print('Done.')
+                time.sleep(wait_time)
             init_vals
         else: # we scan from the end in this case
             init
+                    
+        # save data
+        print('Saving data...')
+        # get an output filename
+        [output_foldernamem,output_filename]=setup_filename(scanname_comments)
+                
         # return to initial value            
         if tag_return2init:
-            print('returning to initial values...')
+            print('Returning to initial values...')
             for i in range(len(scan_PVs)):
                 epics.caput(scan_PVs[i],init_vals[i])
-            print('done.')
+            print('Done.')
 
         
 else:
