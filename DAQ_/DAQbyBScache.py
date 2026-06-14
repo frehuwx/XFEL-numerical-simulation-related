@@ -13,10 +13,77 @@ import datetime
 # PV names
 ################################################################
 
-PMOS_Maloja=['SATOP21-PMOS127-2D:SPECTRUM_X','SATOP21-PMOS127-2D:SPECTRUM_Y']
-PSRD_Furka=['SATOP31-PSRD132:SPECTRUM_X','SATOP31-PSRD132:SPECTRUM_Y']
-PMOS_Furka=['SATOP31-PMOS132-2D:SPECTRUM_X','SATOP31-PMOS132-2D:SPECTRUM_Y']
-PSSS=['SARFE10-PSSS059:SPECTRUM_X','SARFE10-PSSS059:SPECTRUM_Y']
+# bunch destinations
+Bunch2Athos=2 # Remembr to change it to 1 if bunch destinations are swapped!
+
+# spectrometers
+PMOS_Maloja=['SATOP21-PMOS127-2D:SPECTRUM_X','SATOP21-PMOS127-2D:SPECTRUM_Y'] # PMOS Maloja
+PSRD_Furka=['SATOP31-PSRD132:SPECTRUM_X','SATOP31-PSRD132:SPECTRUM_Y'] # PSRD
+PMOS_Furka=['SATOP31-PMOS132-2D:SPECTRUM_X','SATOP31-PMOS132-2D:SPECTRUM_Y'] # PMOS Furka
+PSSS=['SARFE10-PSSS059:SPECTRUM_X','SARFE10-PSSS059:SPECTRUM_Y'] # PSSS (Aramis)
+
+# laser (seed 2) channels
+Laser_chs=[ #'SSL2-LSPC-SPEC1:SPECTRUM', # seed 2 spec meas (old)
+            #'SSL2-LSPC-SPEC1:WAVELENGTHS', # seed 2 spec meas (x axis) (old)
+            'SSL2-CPCW-SPEC01:SPECTRUM', # seed 2 spec meas
+            'SSL-LADC-WL004:ADC1_CAL'] # seed 2 intensity
+
+# other channels
+if Bunch2Athos==1:
+    otherPV_chs=[ "SINBC02-DBCM410:LM-AG-CH2-B1",
+                  "S10MA01-DCDR080:LM-AG-CH1-B1",
+                  "SATUN13-DBPM070:Q1",
+                  "SATBD02-DBPM010:Q1",
+                  "SATBD02-DBPM010:Q1-VALID",
+                  "SATMA02-RLLE-DSP:PHASE-VS",
+                  "SATMA02-RLLE-DSP:AMPLT-VS",
+                  "SATFE10-PEPG046:FCUP-INTENSITY-CAL",
+                  "SATFE10-PEPG046-EVR0:CALCI"]
+else:
+    otherPV_chs=[ "SINBC02-DBCM410:LM-AG-CH2-B2",
+                  "S10MA01-DCDR080:LM-AG-CH1-B2",
+                  "SATMA02-RLLE-DSP:PHASE-VS",
+                  "SATMA02-RLLE-DSP:AMPLT-VS",
+                  "SATFE10-PEPG046:FCUP-INTENSITY-CAL",
+                  "SATFE10-PEPG046-EVR0:CALCI"]
+
+# BPMs
+BPM_chs_raw=[ "SINBC02-DBPM140",
+              "SINBC02-DBPM320",
+              "S10BC02-DBPM140",
+              "S10BC02-DBPM320",
+              "SATMA01-DBPM620",
+              "SATDI01-DBPM030",
+              "SATDI01-DBPM060",
+              "SATUN04-DBPM010",
+              "SATUN05-DBPM410",
+              "SATMA02-DBPM030",
+              "SATSY02-DBPM020",
+              "SATSY02-DBPM210",
+              "SATSY03-DBPM030",
+              "SATSY03-DBPM060",
+              "SATSY03-DBPM090",
+              "SATSY03-DBPM120",
+              "SATCL01-DBPM140",
+              "SATDI01-DBPM210",
+              "SATDI01-DBPM240",
+              "SATDI01-DBPM270",
+              "SATDI01-DBPM310",
+              "SATBD02-DBPM010"]
+for n_und in range(6, 23):
+    if n_und == 14:
+        continue
+    BPM_chs_raw.append('SATUN%02i-DBPM070' % n_und)
+            
+# configure the PV names
+BPM_chs=[]
+for bpm in BPM_chs_raw:
+    for dim in ['X', 'Y']:
+        if Bunch2Athos==1:
+            BPM_chs.append('%s:%s1' % (bpm, dim))
+        else:
+            BPM_chs.append('%s:%s2' % (bpm, dim))
+
 
 ################################################################
 # BSCache class
@@ -81,7 +148,7 @@ nshots=100
 # configure the PVs
 scan_PV=''
 spec_PVs=PSRD_Furka
-other_PVs=[]
+other_PVs=[otherPV_chs, Laser_chs, BPM_chs]
 
 # configure the scan range
 val_begin=0
