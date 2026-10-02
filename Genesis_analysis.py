@@ -299,6 +299,34 @@ class genesis_output():
             plt.legend()
             plt.show()
         return [z_axis,power_sum]
+
+    # get the current-averaged bunching at a given time step
+    def avg_bunching(self,trange=[],idx_z=-1,incl_phase=True):
+        # get the bunching
+        [z_axis,t_axis,bunching]=self.plot2D('bunching','beam',False)
+        [z_axis,t_axis,bphase]=self.plot2D('bunchingphase','beam',False)
+        bunching_of_interest=bunching[idx_z]
+        bphase_of_interest=bphase[idx_z]
+        # get the current
+        current=self.get_entry('current','beam')
+        current_of_interest=current
+        
+        # apply the window, if needed
+        if len(trange)>0:
+            mask=np.logical_and(t_axis>tange[0],t_axis<tange[1])
+            bunching_of_interest=bunching_of_interest[mask]
+            bphase_of_interest=bphase_of_interest[mask]
+            current_of_interest=current[mask]
+            
+        # get the averaged bunching
+        avg_bunching=0
+        if incl_phase:
+            avg_bunching=np.nansum(current_of_interest*bunching_of_interest*np.exp(1j*bphase_of_interest))/np.nansum(current_of_interest)
+        else:
+            avg_bunching=np.nansum(current_of_interest*bunching_of_interest)/np.nansum(current_of_interest)
+            
+        return avg_bunching
+        
     
     # output required spectrum along z axis
     def spectrum_single(self,trange=[],idx_z=-1,entry='farfield',padding=0,Hanns_window=False,debug=False,cali=True):
@@ -422,6 +450,7 @@ class genesis_output():
         # get the correlation
         g12=np.sum(E1*np.conj(E2))/np.sqrt(np.sum(abs(E1*np.conj(E1)))*np.sum(abs(E2*np.conj(E2))))
         return g12
+        
     def correlation_evolve(self,t1,t2,delt,tag_um=True):
         # get the z axis
         lenz=len(self.z_axis)
